@@ -442,7 +442,7 @@ export default function App() {
                 ? "Admin Login"
                 : mode === "signup"
                 ? "Create Account"
-                : "Welcome Back!"}
+                : ""}
             </h1>
 
             <p className="login-description">
