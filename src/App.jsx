@@ -192,6 +192,7 @@ export default function App() {
   const [city, setCity] = useState("Hyderabad");
   const [weather, setWeather] = useState(null);
   const [forecast, setForecast] = useState(null);
+  const [pastWeather, setPastWeather] = useState(null);
   const [place, setPlace] = useState("Charminar");
   const [background, setBackground] = useState("");
   const [loading, setLoading] = useState(false);
@@ -326,10 +327,11 @@ export default function App() {
       const params = new URLSearchParams({
         latitude: location.latitude,
         longitude: location.longitude,
+        past_days: 7,
         current:
           "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,precipitation",
         daily:
-          "weather_code,temperature_2m_max,temperature_2m_min",
+         "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum",
         timezone: "auto",
         forecast_days: "7"
       });
@@ -344,8 +346,31 @@ export default function App() {
 
       const data = await response.json();
 
-      setWeather(data.current);
-      setForecast(data.daily);
+     
+setWeather(data.current);
+
+const today = data.daily.time[data.daily.time.length - 8];
+
+const pastData = {
+  time: data.daily.time.filter(date => date < today),
+  temperature_2m_max: data.daily.temperature_2m_max.filter((_, i) => data.daily.time[i] < today),
+  temperature_2m_min: data.daily.temperature_2m_min.filter((_, i) => data.daily.time[i] < today),
+  precipitation_sum: data.daily.precipitation_sum.filter((_, i) => data.daily.time[i] < today),
+  weather_code: data.daily.weather_code.filter((_, i) => data.daily.time[i] < today)
+};
+
+setPastWeather(pastData);
+
+const futureData = {
+  ...data.daily,
+  time: data.daily.time.filter(date => date >= today),
+  temperature_2m_max: data.daily.temperature_2m_max.filter((_, i) => data.daily.time[i] >= today),
+  temperature_2m_min: data.daily.temperature_2m_min.filter((_, i) => data.daily.time[i] >= today),
+  weather_code: data.daily.weather_code.filter((_, i) => data.daily.time[i] >= today)
+};
+
+setForecast(futureData);
+
       setCity(location.name);
       setCityInput(location.name);
 
@@ -438,12 +463,12 @@ export default function App() {
             </span>
 
             <h1>
-              {role === "admin"
-                ? "Admin Login"
-                : mode === "signup"
-                ? "Create Account"
-                : ""}
-            </h1>
+  {role === "admin"
+    ? "Admin Login"
+    : mode === "signup"
+    ? "Create Account"
+    : ""}
+</h1>
 
             <p className="login-description">
               {role === "admin"
@@ -809,6 +834,43 @@ export default function App() {
           })}
 
         </div>
+  
+<h2>Past 7 Days</h2>
+
+<div className="forecast">
+  {pastWeather?.time.map((day, i) => {
+    const [dayCondition, DayIcon] =
+      getWeather(pastWeather.weather_code[i]);
+
+    return (
+      <div className="forecast-card" key={day}>
+        <h4>
+          {new Date(day + "T12:00:00").toLocaleDateString("en", {
+            weekday: "short",
+            day: "numeric",
+            month: "short"
+          })}
+        </h4>
+
+        <DayIcon size={30} />
+
+        <h3>
+          {Math.round(pastWeather.temperature_2m_max[i])}°
+        </h3>
+
+        <p>
+          {Math.round(pastWeather.temperature_2m_min[i])}°
+        </p>
+
+        <small>{dayCondition}</small>
+
+        <small>
+          Rainfall: {pastWeather.precipitation_sum[i] ?? 0} mm
+        </small>
+      </div>
+    );
+  })}
+</div>
 
       </main>
     </div>
